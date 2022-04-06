@@ -6,7 +6,7 @@ import { switchMap } from 'rxjs/operators';
 import { Category } from '../shared/category.model';
 import { CategoryService } from '../shared/category.service';
 
-import toastr from 'toastr';
+import * as toastr from 'toastr';
 
 @Component({
   selector: 'app-category-form',
@@ -18,8 +18,8 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
   currentAction: string;
   categoryForm: FormGroup;
   pageTitle: string;
-  serverError: string[] = null;
-  submitForm: boolean = false;
+  serverErrorMessages: string[] = null;
+  submtingitForm: boolean = false;
   category: Category = new Category();
 
   constructor(
@@ -39,6 +39,15 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
     this.setPageTitle();
   }
 
+  submitForm(){
+    this.submtingitForm = true;
+
+    if(this.currentAction == "new")
+      this.createCategory();
+    else 
+      this.updateCategory()
+  }
+
   //metodos privados
 
   private setCurrentAction(){
@@ -51,7 +60,7 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
   private buildCategoryForm(){
     this.categoryForm = this.formBuilder.group({
       id: [null],
-      name: [null, Validators.required, Validators.minLength(2)],
+      name: [null, [Validators.required, Validators.minLength(2)]],
       description: [null]
     })
   }
@@ -78,6 +87,37 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
       const categoryName = this.category.name || "";
       this.pageTitle = "Editando categoria: " + categoryName;
     } 
-      
+  }
+
+  private createCategory(){
+    const category: Category = Object.assign(new Category(), this.categoryForm.value);
+
+    this.categoryService.create(category).subscribe(
+      category => this.actionForSucess(category),
+      error => this.actionsErrors(error)
+    )
+  }
+
+  private updateCategory(){
+    
+  }
+
+  private actionForSucess(category: Category) {
+    toastr.success("Solicitação processada com sucesso!");
+
+    this.router.navigateByUrl("categories", {skipLocationChange: true}).then(
+      () => this.router.navigate(["categories", category.id, "edit"])
+    )
+  }
+
+  private actionsErrors(error){
+    toastr.error("Ocorreu um erro ao processar sua solicitação!");
+
+    this.submtingitForm = false;
+
+    if(error.status === 422)
+      this.serverErrorMessages = JSON.parse(error._body).erorrs;
+    else
+      this.serverErrorMessages = ["Falha na comunicação com o servidor. Por favor, teste mais tarde."]
   }
 }
